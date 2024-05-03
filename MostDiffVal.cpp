@@ -217,14 +217,16 @@ public:
 		auto srcp_c1_U = src_c1->GetReadPtr(PLANAR_U);
 		auto srcp_c2_U = src_c2->GetReadPtr(PLANAR_U);
 
-		auto srcp_ref_V = src_ref->GetReadPtr(PLANAR_U);
-		auto srcp_c1_V = src_c1->GetReadPtr(PLANAR_U);
-		auto srcp_c2_V = src_c2->GetReadPtr(PLANAR_U);
+		auto srcp_ref_V = src_ref->GetReadPtr(PLANAR_V);
+		auto srcp_c1_V = src_c1->GetReadPtr(PLANAR_V);
+		auto srcp_c2_V = src_c2->GetReadPtr(PLANAR_V);
 
 		auto dstp_Y = dst->GetWritePtr(PLANAR_Y);
 		auto dstp_U = dst->GetWritePtr(PLANAR_U);
 		auto dstp_V = dst->GetWritePtr(PLANAR_V);
-		auto height = src_ref->GetHeight(PLANAR_Y);
+		auto height_Y = src_ref->GetHeight(PLANAR_Y);
+		auto height_U = src_ref->GetHeight(PLANAR_U);
+		auto height_V = src_ref->GetHeight(PLANAR_V);
 
 		auto row_size_ref_Y = src_ref->GetRowSize(PLANAR_Y) / vi.ComponentSize();
 		auto row_size_c1_Y = src_c1->GetRowSize(PLANAR_Y) / vi.ComponentSize();
@@ -258,39 +260,39 @@ public:
 		{
 			// Y
 			ProcessPlane<uint8_t>((uint8_t*)srcp_ref_Y, (uint8_t*)srcp_c1_Y, (uint8_t*)srcp_c2_Y, dstp_Y, src_ref_pitch_Y, src_c1_pitch_Y, src_c2_pitch_Y, 
-				dst_pitch_Y, height, row_size_ref_Y, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_Y, height_Y, row_size_ref_Y, vi.BitsPerComponent(), threads, _cpuFlags);
 			// U
 			ProcessPlane<uint8_t>((uint8_t*)srcp_ref_U, (uint8_t*)srcp_c1_U, (uint8_t*)srcp_c2_U, dstp_U, src_ref_pitch_U, src_c1_pitch_U, src_c2_pitch_U,
-				dst_pitch_U, height, row_size_ref_U, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_U, height_U, row_size_ref_U, vi.BitsPerComponent(), threads, _cpuFlags);
 			// V
 			ProcessPlane<uint8_t>((uint8_t*)srcp_ref_V, (uint8_t*)srcp_c1_V, (uint8_t*)srcp_c2_V, dstp_V, src_ref_pitch_V, src_c1_pitch_V, src_c2_pitch_V,
-				dst_pitch_V, height, row_size_ref_V, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_V, height_V, row_size_ref_V, vi.BitsPerComponent(), threads, _cpuFlags);
 
 		}
 		if (vi.ComponentSize() == 2)
 		{
 			// Y
 			ProcessPlane<uint16_t>((uint8_t*)srcp_ref_Y, (uint8_t*)srcp_c1_Y, (uint8_t*)srcp_c2_Y, dstp_Y, src_ref_pitch_Y, src_c1_pitch_Y, src_c2_pitch_Y,
-				dst_pitch_Y, height, row_size_ref_Y, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_Y, height_Y, row_size_ref_Y, vi.BitsPerComponent(), threads, _cpuFlags);
 			// U
 			ProcessPlane<uint16_t>((uint8_t*)srcp_ref_U, (uint8_t*)srcp_c1_U, (uint8_t*)srcp_c2_U, dstp_U, src_ref_pitch_U, src_c1_pitch_U, src_c2_pitch_U,
-				dst_pitch_U, height, row_size_ref_U, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_U, height_U, row_size_ref_U, vi.BitsPerComponent(), threads, _cpuFlags);
 			// V
 			ProcessPlane<uint16_t>((uint8_t*)srcp_ref_V, (uint8_t*)srcp_c1_V, (uint8_t*)srcp_c2_V, dstp_V, src_ref_pitch_V, src_c1_pitch_V, src_c2_pitch_V,
-				dst_pitch_V, height, row_size_ref_V, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_V, height_V, row_size_ref_V, vi.BitsPerComponent(), threads, _cpuFlags);
 
 		}
 		if (vi.ComponentSize() == 4)
 		{
 			// Y
 			ProcessPlane<float>((uint8_t*)srcp_ref_Y, (uint8_t*)srcp_c1_Y, (uint8_t*)srcp_c2_Y, dstp_Y, src_ref_pitch_Y, src_c1_pitch_Y, src_c2_pitch_Y,
-				dst_pitch_Y, height, row_size_ref_Y, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_Y, height_Y, row_size_ref_Y, vi.BitsPerComponent(), threads, _cpuFlags);
 			// U
 			ProcessPlane<float>((uint8_t*)srcp_ref_U, (uint8_t*)srcp_c1_U, (uint8_t*)srcp_c2_U, dstp_U, src_ref_pitch_U, src_c1_pitch_U, src_c2_pitch_U,
-				dst_pitch_U, height, row_size_ref_U, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_U, height_U, row_size_ref_U, vi.BitsPerComponent(), threads, _cpuFlags);
 			// V
 			ProcessPlane<float>((uint8_t*)srcp_ref_V, (uint8_t*)srcp_c1_V, (uint8_t*)srcp_c2_V, dstp_V, src_ref_pitch_V, src_c1_pitch_V, src_c2_pitch_V,
-				dst_pitch_V, height, row_size_ref_V, vi.BitsPerComponent(), threads, _cpuFlags);
+				dst_pitch_V, height_V, row_size_ref_V, vi.BitsPerComponent(), threads, _cpuFlags);
 
 		}
 		return dst;
