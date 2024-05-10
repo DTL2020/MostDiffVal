@@ -13,6 +13,7 @@ Params:
    
 Usage:
 MostDiffVal(clip_ref, clip1, clip2)
+
 Where clip_ref recommended to be average of blurred clip1 and clip2.
 
 Example of function GetSharpest:
