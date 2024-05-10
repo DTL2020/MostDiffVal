@@ -3,6 +3,17 @@
 #include <immintrin.h>
 #include <cstdlib>
 
+
+#define _mm128i_abs_sub_epu8(a,b) _mm_or_si128(_mm_subs_epu8(a, b), _mm_subs_epu8(a, b))
+#define _mm128i_abs_sub_epu16(a,b) _mm_or_si128(_mm_subs_epu16(a, b), _mm_subs_epu16(a, b))
+
+#define _mm256i_abs_sub_epu8(a,b) _mm256_or_si256(_mm256_subs_epu8(a, b), _mm256_subs_epu8(a, b))
+#define _mm256i_abs_sub_epu16(a,b) _mm256_or_si256(_mm256_subs_epu16(a, b), _mm256_subs_epu16(a, b))
+
+#define _mm512i_abs_sub_epu8(a,b) _mm512_or_si512(_mm512_subs_epu8(a, b), _mm512_subs_epu8(a, b))
+#define _mm512i_abs_sub_epu16(a,b) _mm512_or_si512(_mm512_subs_epu16(a, b), _mm512_subs_epu16(a, b))
+
+
 template<typename pixel_t>
 void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned char* _srcp_c2,
 	unsigned char* _dstp,
@@ -67,7 +78,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 				}
 			}
 			else
-				if (cpuFlags & CPUF_AVX) // use AVX
+				if (cpuFlags & CPUF_AVX2) // use AVX2
 				{
 					float* pf_src = (float*)l_srcp;
 					float* pf_dst = (float*)l_dstp;
@@ -124,17 +135,11 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 							__m128i c2_0_15 = _mm_load_si128((__m128i*)p_src_c2); 
 							__m128i c2_16_31 = _mm_load_si128((__m128i*)(p_src_c2 + 16));
 
-							__m128i dif_c1_0_15 = _mm_sub_epi8(ref_0_15, c1_0_15);
-							__m128i dif_c1_16_31 = _mm_sub_epi8(ref_16_31, c1_16_31);
+							__m128i abs_dif_c1_0_15 = _mm128i_abs_sub_epu8(ref_0_15, c1_0_15);
+							__m128i abs_dif_c1_16_31 = _mm128i_abs_sub_epu8(ref_16_31, c1_16_31);
 
-							__m128i dif_c2_0_15 = _mm_sub_epi8(ref_0_15, c2_0_15);
-							__m128i dif_c2_16_31 = _mm_sub_epi8(ref_16_31, c2_16_31);
-
-							__m128i abs_dif_c1_0_15 = _mm_abs_epi8(dif_c1_0_15);//SSSE3
-							__m128i abs_dif_c1_16_31 = _mm_abs_epi8(dif_c1_16_31);//SSSE3
-
-							__m128i abs_dif_c2_0_15 = _mm_abs_epi8(dif_c2_0_15);//SSSE3
-							__m128i abs_dif_c2_16_31 = _mm_abs_epi8(dif_c2_16_31);//SSSE3
+							__m128i abs_dif_c2_0_15 = _mm128i_abs_sub_epu8(ref_0_15, c2_0_15);
+							__m128i abs_dif_c2_16_31 = _mm128i_abs_sub_epu8(ref_16_31, c2_16_31);
 
 							__m128i mask_0_15 = _mm_cmpgt_epi8(abs_dif_c1_0_15, abs_dif_c2_0_15);
 							__m128i mask_16_31 = _mm_cmpgt_epi8(abs_dif_c1_16_31, abs_dif_c2_16_31);
@@ -284,17 +289,11 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 					__m128i c2_0_7 = _mm_load_si128((__m128i*)p_src_c2);
 					__m128i c2_8_15 = _mm_load_si128((__m128i*)(p_src_c2 + 16));
 
-					__m128i dif_c1_0_7 = _mm_sub_epi16(ref_0_7, c1_0_7);
-					__m128i dif_c1_8_15 = _mm_sub_epi16(ref_8_15, c1_8_15);
+					__m128i abs_dif_c1_0_7 = _mm128i_abs_sub_epu16(ref_0_7, c1_0_7);
+					__m128i abs_dif_c1_8_15 = _mm128i_abs_sub_epu16(ref_8_15, c1_8_15);
 
-					__m128i dif_c2_0_7 = _mm_sub_epi16(ref_0_7, c2_0_7);
-					__m128i dif_c2_8_15 = _mm_sub_epi16(ref_8_15, c2_8_15);
-
-					__m128i abs_dif_c1_0_7 = _mm_abs_epi16(dif_c1_0_7);//SSSE3
-					__m128i abs_dif_c1_8_15 = _mm_abs_epi16(dif_c1_8_15);//SSSE3
-
-					__m128i abs_dif_c2_0_7 = _mm_abs_epi16(dif_c2_0_7);//SSSE3
-					__m128i abs_dif_c2_8_15 = _mm_abs_epi16(dif_c2_8_15);//SSSE3
+					__m128i abs_dif_c2_0_7 = _mm128i_abs_sub_epu16(ref_0_7, c2_0_7);
+					__m128i abs_dif_c2_8_15 = _mm128i_abs_sub_epu16(ref_8_15, c2_8_15);
 
 					__m128i mask_0_7 = _mm_cmpgt_epi16(abs_dif_c1_0_7, abs_dif_c2_0_7);
 					__m128i mask_8_15 = _mm_cmpgt_epi16(abs_dif_c1_8_15, abs_dif_c2_8_15);
