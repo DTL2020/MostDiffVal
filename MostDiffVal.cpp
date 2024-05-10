@@ -41,7 +41,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 			pixel_t* l_srcp_c1 = srcp_c1 + y * src_pitch_c1;
 			pixel_t* l_srcp_c2 = srcp_c2 + y * src_pitch_c2;
 
-			if (cpuFlags & CPUF_AVX512F) // use AVX512
+/*			if (cpuFlags & CPUF_AVX512F) // use AVX512
 			{
 				uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
 				uint8_t* p_src_c1 = (uint8_t*)l_srcp_c1;
@@ -88,7 +88,6 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 					__m512i res_128_191 = _mm512_mask_blend_epi8(mask_128_191, c2_128_191, c1_128_191);
 					__m512i res_192_255 = _mm512_mask_blend_epi8(mask_192_255, c2_192_255, c1_192_255);
 
-
 					_mm512_store_si512((__m512i*)p_dst, res_0_63);
 					_mm512_store_si512((__m256i*)(p_dst + 64), res_64_127);
 					_mm512_store_si512((__m512i*)(p_dst + 128), res_128_191);
@@ -100,7 +99,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 					p_dst += 256;
 				}
 
-				// put SSE with 16 samples per pass
+				// put SSE with 32 samples per pass
 				const int col32 = src_pitch_ref - (src_pitch_ref % 32); // use 16*2 128bit regs to load/store (is it good for current AVS+ row stride ?)
 
 				for (;col < col32; col += 32)
@@ -146,7 +145,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 						l_dstp[col] = l_srcp_c2[col];
 				}
 			}
-			else
+			else */
 				if (cpuFlags & CPUF_AVX2) // use AVX2
 				{
 					uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
@@ -484,15 +483,33 @@ template void ProcessPlane<float>(unsigned char* _srcp_ref, unsigned char* _srcp
 class MostDiffVal : public GenericVideoFilter
 {
 	int threads;
+	int opt;
 	int _cpuFlags;
 
 	PClip child_c1;
 	PClip child_c2;
 
 public:
-	MostDiffVal(PClip _child_ref, PClip _child_c1, PClip _child_c2, int threads_, IScriptEnvironment* env) : GenericVideoFilter(_child_ref), threads(threads_)
+	MostDiffVal(PClip _child_ref, PClip _child_c1, PClip _child_c2, int threads_, int _opt, IScriptEnvironment* env) : GenericVideoFilter(_child_ref), threads(threads_), opt(_opt)
 	{
 		_cpuFlags = env->GetCPUFlags();
+
+		switch (opt)
+		{
+/*		case 3:
+			_cpuFlags = CPUF_AVX512F;
+			break;*/
+		case 2:
+			_cpuFlags = CPUF_AVX2;
+			break;
+		case 1:
+			_cpuFlags = CPUF_SSE4_1;
+			break;
+		case 0:
+			_cpuFlags = 0;
+			break;
+		} // -1 - auto
+
 		if (_child_c1 != 0)
 			child_c1 = _child_c1;
 		else
@@ -603,7 +620,13 @@ public:
 
 AVSValue __cdecl Create_MostDiffVal(AVSValue args, void* user_data, IScriptEnvironment* env)
 {
-	return new MostDiffVal(args[0].AsClip(), args[1].AsClip(), args[2].AsClip(), args[3].AsInt(1), env);
+	return new MostDiffVal(
+		args[0].AsClip(), // ref clip
+		args[1].AsClip(), // clip 1
+		args[2].AsClip(), // clip 2
+		args[3].AsInt(1), // threads
+		args[4].AsInt(-1), // opt -1 - auto, 0 - none, 1 - SSE 4.1, 2 - AVX2, (3 - AVX512)
+		env);
 }
 
 const AVS_Linkage* AVS_linkage = 0;
@@ -611,6 +634,6 @@ const AVS_Linkage* AVS_linkage = 0;
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3(IScriptEnvironment * env, const AVS_Linkage* const vectors)
 {
 	AVS_linkage = vectors;
-	env->AddFunction("MostDiffVal", "ccc[threads]i", Create_MostDiffVal, 0);
+	env->AddFunction("MostDiffVal", "ccc[threads]i[opt]i", Create_MostDiffVal, 0);
 	return "MostDiffVal plugin";
 }
