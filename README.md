@@ -10,6 +10,7 @@ Params:
 3. Clip 2
 4. threads: default 1. Enable internal multi-threading via OpenMP if > 1
 5. opt: default -1 (auto). 0 - disabled SIMD, 1 - SSE 4.2, 2 - AVX2.
+   
 Usage:
 MostDiffVal(clip_ref, clip1, clip2)
 Where clip_ref recommended to be average of blurred clip1 and clip2.
