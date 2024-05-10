@@ -19,6 +19,7 @@ Where clip_ref recommended to be average of blurred clip1 and clip2.
 Example of function GetSharpest:
 
 Function GetSharpest(clip c1, clip c2)
+
 {
 avg=Average(c1.GaussResize(c1.width, c1.height, src_left=0.001, src_top=0.001, p=2), 0.5, c2.GaussResize(c2.width, c2.height, src_left=0.001, src_top=0.001, p=2), 0.5)
 
