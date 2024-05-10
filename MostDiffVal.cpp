@@ -13,6 +13,12 @@
 #define _mm512i_abs_sub_epu8(a,b) _mm512_or_si512(_mm512_subs_epu8(a, b), _mm512_subs_epu8(a, b))
 #define _mm512i_abs_sub_epu16(a,b) _mm512_or_si512(_mm512_subs_epu16(a, b), _mm512_subs_epu16(a, b))
 
+#define _mm_cmpge_epu8(a, b) _mm_cmpeq_epi8(_mm_max_epu8(a, b), a)
+#define _mm_cmpge_epu16(a, b) _mm_cmpeq_epi16(_mm_max_epu16(a, b), a)
+
+#define _mm256_cmpge_epu8(a, b) _mm256_cmpeq_epi8(_mm256_max_epu8(a, b), a)
+#define _mm256_cmpge_epu16(a, b) _mm256_cmpeq_epi16(_mm256_max_epu16(a, b), a)
+
 
 template<typename pixel_t>
 void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned char* _srcp_c2,
@@ -35,86 +41,165 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 			pixel_t* l_srcp_c1 = srcp_c1 + y * src_pitch_c1;
 			pixel_t* l_srcp_c2 = srcp_c2 + y * src_pitch_c2;
 
-			/*					dstp += dst_pitch;
-					srcp_ref += src_pitch_ref;
-					srcp_c1 += src_pitch_c1;
-					srcp_c2 += src_pitch_c2;*/
-
-
-/*			if (cpuFlags & CPUF_AVX512F) // use AVX512
+			if (cpuFlags & CPUF_AVX512F) // use AVX512
 			{
-				float* pf_src = (float*)l_srcp;
-				float* pf_dst = (float*)l_dstp;
-				const int col64 = row_size - (row_size % 64); // use 4*16 512bit regs to load/store
-				__m512 zmm_fone = _mm512_set1_ps(1.0f);
+				uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
+				uint8_t* p_src_c1 = (uint8_t*)l_srcp_c1;
+				uint8_t* p_src_c2 = (uint8_t*)l_srcp_c2;
+				uint8_t* p_dst = (uint8_t*)l_dstp;
+				const int col256 = src_pitch_ref - (src_pitch_ref % 256);
 
-				for (int64_t col = 0; col < col64; col += 64)
+				int64_t col = 0;
+
+				for (col = 0; col < col256; col += 256)
 				{
-					__m512 zmm0 = _mm512_loadu_ps(pf_src); // better align start addr with pre-conversion of 32(64?)-bytes aligned (if exist) and use load_ps
-					__m512 zmm1 = _mm512_loadu_ps(pf_src + 16);
-					__m512 zmm2 = _mm512_loadu_ps(pf_src + 32);
-					__m512 zmm3 = _mm512_loadu_ps(pf_src + 48);
+					__m512i ref_0_63 = _mm512_load_si512((__m512i*)p_src_ref);
+					__m512i ref_64_127 = _mm512_load_si512((__m512i*)(p_src_ref + 64));
+					__m512i ref_128_191 = _mm512_load_si512((__m512i*)(p_src_ref + 128));
+					__m512i ref_192_255 = _mm512_load_si512((__m512i*)(p_src_ref + 192));
 
-					zmm0 = _mm512_sub_ps(zmm_fone, zmm0);
-					zmm1 = _mm512_sub_ps(zmm_fone, zmm1);
-					zmm2 = _mm512_sub_ps(zmm_fone, zmm2);
-					zmm3 = _mm512_sub_ps(zmm_fone, zmm3);
+					__m512i c1_0_63 = _mm512_load_si512((__m512i*)p_src_c1);
+					__m512i c1_64_127 = _mm512_load_si512((__m512i*)(p_src_c1 + 64));
+					__m512i c1_128_191 = _mm512_load_si512((__m512i*)(p_src_c1 + 128));
+					__m512i c1_192_255 = _mm512_load_si512((__m512i*)(p_src_c1 + 192));
 
-					_mm512_storeu_ps(pf_dst, zmm0);
-					_mm512_storeu_ps(pf_dst + 16, zmm1);
-					_mm512_storeu_ps(pf_dst + 32, zmm2);
-					_mm512_storeu_ps(pf_dst + 48, zmm3);
+					__m512i c2_0_63 = _mm512_load_si512((__m512i*)p_src_c2);
+					__m512i c2_64_127 = _mm512_load_si512((__m512i*)(p_src_c2 + 64));
+					__m512i c2_128_191 = _mm512_load_si512((__m512i*)(p_src_c2 + 128));
+					__m512i c2_192_255 = _mm512_load_si512((__m512i*)(p_src_c2 + 192));
 
-					pf_src += 64; // in floats
-					pf_dst += 64;
+					__m512i abs_dif_c1_0_63 = _mm512i_abs_sub_epu8(ref_0_63, c1_0_63);
+					__m512i abs_dif_c1_64_127 = _mm512i_abs_sub_epu8(ref_64_127, c1_64_127);
+					__m512i abs_dif_c1_128_191 = _mm512i_abs_sub_epu8(ref_128_191, c1_128_191);
+					__m512i abs_dif_c1_192_255 = _mm512i_abs_sub_epu8(ref_192_255, c1_192_255);
+
+					__m512i abs_dif_c2_0_63 = _mm512i_abs_sub_epu8(ref_0_63, c2_0_63);
+					__m512i abs_dif_c2_64_127 = _mm512i_abs_sub_epu8(ref_64_127, c2_64_127);
+					__m512i abs_dif_c2_128_191 = _mm512i_abs_sub_epu8(ref_128_191, c2_128_191);
+					__m512i abs_dif_c2_192_255 = _mm512i_abs_sub_epu8(ref_192_255, c2_192_255);
+
+					__mmask64 mask_0_63 = _mm512_cmpge_epu8_mask(abs_dif_c1_0_63, abs_dif_c2_0_63);
+					__mmask64 mask_64_127 = _mm512_cmpge_epu8_mask(abs_dif_c1_64_127, abs_dif_c2_64_127);
+					__mmask64 mask_128_191 = _mm512_cmpge_epu8_mask(abs_dif_c1_128_191, abs_dif_c2_128_191);
+					__mmask64 mask_192_255 = _mm512_cmpge_epu8_mask(abs_dif_c1_192_255, abs_dif_c2_192_255);
+
+					__m512i res_0_63 = _mm512_mask_blend_epi8(mask_0_63, c2_0_63, c1_0_63);
+					__m512i res_64_127 = _mm512_mask_blend_epi8(mask_64_127, c2_64_127, c1_64_127);
+					__m512i res_128_191 = _mm512_mask_blend_epi8(mask_128_191, c2_128_191, c1_128_191);
+					__m512i res_192_255 = _mm512_mask_blend_epi8(mask_192_255, c2_192_255, c1_192_255);
+
+
+					_mm512_store_si512((__m512i*)p_dst, res_0_63);
+					_mm512_store_si512((__m256i*)(p_dst + 64), res_64_127);
+					_mm512_store_si512((__m512i*)(p_dst + 128), res_128_191);
+					_mm512_store_si512((__m256i*)(p_dst + 192), res_192_255);
+
+					p_src_ref += 256; // in bytes
+					p_src_c1 += 256; // in bytes
+					p_src_c2 += 256; // in bytes
+					p_dst += 256;
+				}
+
+				// put SSE with 16 samples per pass
+				const int col32 = src_pitch_ref - (src_pitch_ref % 32); // use 16*2 128bit regs to load/store (is it good for current AVS+ row stride ?)
+
+				for (;col < col32; col += 32)
+				{
+					__m128i ref_0_15 = _mm_load_si128((__m128i*)p_src_ref); 
+					__m128i ref_16_31 = _mm_load_si128((__m128i*)(p_src_ref + 16));
+
+					__m128i c1_0_15 = _mm_load_si128((__m128i*)p_src_c1);
+					__m128i c1_16_31 = _mm_load_si128((__m128i*)(p_src_c1 + 16));
+
+					__m128i c2_0_15 = _mm_load_si128((__m128i*)p_src_c2);
+					__m128i c2_16_31 = _mm_load_si128((__m128i*)(p_src_c2 + 16));
+
+					__m128i abs_dif_c1_0_15 = _mm128i_abs_sub_epu8(ref_0_15, c1_0_15);
+					__m128i abs_dif_c1_16_31 = _mm128i_abs_sub_epu8(ref_16_31, c1_16_31);
+
+					__m128i abs_dif_c2_0_15 = _mm128i_abs_sub_epu8(ref_0_15, c2_0_15);
+					__m128i abs_dif_c2_16_31 = _mm128i_abs_sub_epu8(ref_16_31, c2_16_31);
+
+					__m128i mask_0_15 = _mm_cmpge_epu8(abs_dif_c1_0_15, abs_dif_c2_0_15);
+					__m128i mask_16_31 = _mm_cmpge_epu8(abs_dif_c1_16_31, abs_dif_c2_16_31);
+
+					__m128i res_0_15 = _mm_blendv_epi8(c2_0_15, c1_0_15, mask_0_15);// SSE 4.1
+					__m128i res_16_31 = _mm_blendv_epi8(c2_16_31, c1_16_31, mask_16_31);
+
+					_mm_store_si128((__m128i*)p_dst, res_0_15);
+					_mm_store_si128((__m128i*)(p_dst + 16), res_16_31);
+
+					p_src_ref += 32; // in bytes
+					p_src_c1 += 32; // in bytes
+					p_src_c2 += 32; // in bytes
+					p_dst += 32;
 				}
 
 				// last cols
-				for (int64_t col = col64; col < row_size; ++col)
+				for (;col < row_size; ++col)
 				{
-					*pf_dst = (pixel_t)(1.0f - *pf_src);
-					pf_dst++;
-					pf_src++;
+					int iDiffC1 = std::abs(l_srcp_ref[col] - l_srcp_c1[col]);
+					int iDiffC2 = std::abs(l_srcp_ref[col] - l_srcp_c2[col]);
+					if (iDiffC1 > iDiffC2)
+						l_dstp[col] = l_srcp_c1[col];
+					else
+						l_dstp[col] = l_srcp_c2[col];
 				}
 			}
 			else
 				if (cpuFlags & CPUF_AVX2) // use AVX2
 				{
-					float* pf_src = (float*)l_srcp;
-					float* pf_dst = (float*)l_dstp;
-					const int col32 = row_size - (row_size % 32); // use 4*8 256bit regs to load/store
-					__m256 ymm_fone = _mm256_set1_ps(1.0f);
+					uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
+					uint8_t* p_src_c1 = (uint8_t*)l_srcp_c1;
+					uint8_t* p_src_c2 = (uint8_t*)l_srcp_c2;
+					uint8_t* p_dst = (uint8_t*)l_dstp;
+					const int col64 = src_pitch_ref - (src_pitch_ref % 64); 
 
-					for (int64_t col = 0; col < col32; col += 32)
+					for (int64_t col = 0; col < col64; col += 64)
 					{
-						__m256 ymm0 = _mm256_loadu_ps(pf_src); // better align start addr with pre-conversion of 32-bytes aligned (if exist) and use load_ps
-						__m256 ymm1 = _mm256_loadu_ps(pf_src + 8);
-						__m256 ymm2 = _mm256_loadu_ps(pf_src + 16);
-						__m256 ymm3 = _mm256_loadu_ps(pf_src + 24);
+						__m256i ref_0_31 = _mm256_load_si256((__m256i*)p_src_ref); 
+						__m256i ref_32_63 = _mm256_load_si256((__m256i*)(p_src_ref + 32));
 
-						ymm0 = _mm256_sub_ps(ymm_fone, ymm0);
-						ymm1 = _mm256_sub_ps(ymm_fone, ymm1);
-						ymm2 = _mm256_sub_ps(ymm_fone, ymm2);
-						ymm3 = _mm256_sub_ps(ymm_fone, ymm3);
+						__m256i c1_0_31 = _mm256_load_si256((__m256i*)p_src_c1);
+						__m256i c1_32_63 = _mm256_load_si256((__m256i*)(p_src_c1 + 32));
 
-						_mm256_storeu_ps(pf_dst, ymm0);
-						_mm256_storeu_ps(pf_dst + 8, ymm1);
-						_mm256_storeu_ps(pf_dst + 16, ymm2);
-						_mm256_storeu_ps(pf_dst + 24, ymm3);
+						__m256i c2_0_31 = _mm256_load_si256((__m256i*)p_src_c2);
+						__m256i c2_32_63 = _mm256_load_si256((__m256i*)(p_src_c2 + 32));
 
-						pf_src += 32; // in floats
-						pf_dst += 32;
+						__m256i abs_dif_c1_0_31 = _mm256i_abs_sub_epu8(ref_0_31, c1_0_31);
+						__m256i abs_dif_c1_32_63 = _mm256i_abs_sub_epu8(ref_32_63, c1_32_63);
+
+						__m256i abs_dif_c2_0_31 = _mm256i_abs_sub_epu8(ref_0_31, c2_0_31);
+						__m256i abs_dif_c2_32_63 = _mm256i_abs_sub_epu8(ref_32_63, c2_32_63);
+
+						__m256i mask_0_31 = _mm256_cmpge_epu8(abs_dif_c1_0_31, abs_dif_c2_0_31);
+						__m256i mask_32_63 = _mm256_cmpge_epu8(abs_dif_c1_32_63, abs_dif_c2_32_63);
+
+						__m256i res_0_31 = _mm256_blendv_epi8(c2_0_31, c1_0_31, mask_0_31);
+						__m256i res_32_63 = _mm256_blendv_epi8(c2_32_63, c1_32_63, mask_32_63);
+
+						_mm256_store_si256((__m256i*)p_dst, res_0_31);
+						_mm256_store_si256((__m256i*)(p_dst + 32), res_32_63);
+
+						p_src_ref += 64; // in bytes
+						p_src_c1 += 64; // in bytes
+						p_src_c2 += 64; // in bytes
+						p_dst += 64;
+
 					}
 
-					// last cols
-					for (int64_t col = col32; col < row_size; ++col)
-					{
-						*pf_dst = (pixel_t)(1.0f - *pf_src);
-						pf_dst++;
-						pf_src++;
-					}
+						// last cols
+						for (int64_t col = col64; col < row_size; ++col)
+						{
+							int iDiffC1 = std::abs(l_srcp_ref[col] - l_srcp_c1[col]);
+							int iDiffC2 = std::abs(l_srcp_ref[col] - l_srcp_c2[col]);
+							if (iDiffC1 > iDiffC2)
+								l_dstp[col] = l_srcp_c1[col];
+							else
+								l_dstp[col] = l_srcp_c2[col];
+						}
 				}
-				else*/
+				else
 					if (cpuFlags & CPUF_SSE4_1) // use SSE up to 4.1
 					{
 						uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
@@ -141,8 +226,8 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 							__m128i abs_dif_c2_0_15 = _mm128i_abs_sub_epu8(ref_0_15, c2_0_15);
 							__m128i abs_dif_c2_16_31 = _mm128i_abs_sub_epu8(ref_16_31, c2_16_31);
 
-							__m128i mask_0_15 = _mm_cmpgt_epi8(abs_dif_c1_0_15, abs_dif_c2_0_15);
-							__m128i mask_16_31 = _mm_cmpgt_epi8(abs_dif_c1_16_31, abs_dif_c2_16_31);
+							__m128i mask_0_15 = _mm_cmpge_epu8(abs_dif_c1_0_15, abs_dif_c2_0_15);
+							__m128i mask_16_31 = _mm_cmpge_epu8(abs_dif_c1_16_31, abs_dif_c2_16_31);
 
 							__m128i res_0_15 = _mm_blendv_epi8(c2_0_15, c1_0_15, mask_0_15);// SSE 4.1
 							__m128i res_16_31 = _mm_blendv_epi8(c2_16_31, c1_16_31, mask_16_31);
@@ -189,86 +274,113 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 			pixel_t* l_srcp_c1 = srcp_c1 + y * src_pitch_c1;
 			pixel_t* l_srcp_c2 = srcp_c2 + y * src_pitch_c2;
 
-			/*					dstp += dst_pitch;
-					srcp_ref += src_pitch_ref;
-					srcp_c1 += src_pitch_c1;
-					srcp_c2 += src_pitch_c2;*/
+
+/*
+			if (cpuFlags & CPUF_AVX512F) // use AVX512
+			{
+				uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
+				uint8_t* p_src_c1 = (uint8_t*)l_srcp_c1;
+				uint8_t* p_src_c2 = (uint8_t*)l_srcp_c2;
+				uint8_t* p_dst = (uint8_t*)l_dstp;
+				const int col256 = src_pitch_ref - (src_pitch_ref % 256);
+
+				for (int64_t col = 0; col < col256; col += 256)
+				{
+					__m256i ref_0_15 = _mm256_load_si256((__m256i*)p_src_ref);
+					__m256i ref_16_31 = _mm256_load_si256((__m256i*)(p_src_ref + 32));
+					__m256i ref_0_15 = _mm256_load_si256((__m256i*)p_src_ref);
+					__m256i ref_16_31 = _mm256_load_si256((__m256i*)(p_src_ref + 32));
+
+					__m256i c1_0_15 = _mm256_load_si256((__m256i*)p_src_c1);
+					__m256i c1_16_31 = _mm256_load_si256((__m256i*)(p_src_c1 + 32));
+					__m256i c1_0_15 = _mm256_load_si256((__m256i*)p_src_c1);
+					__m256i c1_16_31 = _mm256_load_si256((__m256i*)(p_src_c1 + 32));
+
+					__m256i c2_0_15 = _mm256_load_si256((__m256i*)p_src_c2);
+					__m256i c2_16_31 = _mm256_load_si256((__m256i*)(p_src_c2 + 32));
+					__m256i c2_0_15 = _mm256_load_si256((__m256i*)p_src_c2);
+					__m256i c2_16_31 = _mm256_load_si256((__m256i*)(p_src_c2 + 32));
 
 
-					/*			if (cpuFlags & CPUF_AVX512F) // use AVX512
-								{
-									float* pf_src = (float*)l_srcp;
-									float* pf_dst = (float*)l_dstp;
-									const int col64 = row_size - (row_size % 64); // use 4*16 512bit regs to load/store
-									__m512 zmm_fone = _mm512_set1_ps(1.0f);
+					zmm0 = _mm512_sub_ps(zmm_fone, zmm0);
+					zmm1 = _mm512_sub_ps(zmm_fone, zmm1);
+					zmm2 = _mm512_sub_ps(zmm_fone, zmm2);
+					zmm3 = _mm512_sub_ps(zmm_fone, zmm3);
 
-									for (int64_t col = 0; col < col64; col += 64)
-									{
-										__m512 zmm0 = _mm512_loadu_ps(pf_src); // better align start addr with pre-conversion of 32(64?)-bytes aligned (if exist) and use load_ps
-										__m512 zmm1 = _mm512_loadu_ps(pf_src + 16);
-										__m512 zmm2 = _mm512_loadu_ps(pf_src + 32);
-										__m512 zmm3 = _mm512_loadu_ps(pf_src + 48);
+					_mm512_storeu_ps(pf_dst, zmm0);
+					_mm512_storeu_ps(pf_dst + 16, zmm1);
+					_mm512_storeu_ps(pf_dst + 32, zmm2);
+					_mm512_storeu_ps(pf_dst + 48, zmm3);
 
-										zmm0 = _mm512_sub_ps(zmm_fone, zmm0);
-										zmm1 = _mm512_sub_ps(zmm_fone, zmm1);
-										zmm2 = _mm512_sub_ps(zmm_fone, zmm2);
-										zmm3 = _mm512_sub_ps(zmm_fone, zmm3);
+					pf_src += 64; // in floats
+					pf_dst += 64;
+				}
 
-										_mm512_storeu_ps(pf_dst, zmm0);
-										_mm512_storeu_ps(pf_dst + 16, zmm1);
-										_mm512_storeu_ps(pf_dst + 32, zmm2);
-										_mm512_storeu_ps(pf_dst + 48, zmm3);
+				// last cols
+				for (int64_t col = col256; col < row_size; ++col)
+				{
+					int iDiffC1 = std::abs(l_srcp_ref[col] - l_srcp_c1[col]);
+					int iDiffC2 = std::abs(l_srcp_ref[col] - l_srcp_c2[col]);
+					if (iDiffC1 > iDiffC2)
+						l_dstp[col] = l_srcp_c1[col];
+					else
+						l_dstp[col] = l_srcp_c2[col];
+				}
+			}
+			else*/
+			if (cpuFlags & CPUF_AVX2) // use AVX2
+			{
+				uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
+				uint8_t* p_src_c1 = (uint8_t*)l_srcp_c1;
+				uint8_t* p_src_c2 = (uint8_t*)l_srcp_c2;
+				uint8_t* p_dst = (uint8_t*)l_dstp;
+				const int col32 = src_pitch_ref - (src_pitch_ref % 64);
 
-										pf_src += 64; // in floats
-										pf_dst += 64;
-									}
+				for (int64_t col = 0; col < col32; col += 32)
+				{
+					__m256i ref_0_15 = _mm256_load_si256((__m256i*)p_src_ref);
+					__m256i ref_16_31 = _mm256_load_si256((__m256i*)(p_src_ref + 32));
 
-									// last cols
-									for (int64_t col = col64; col < row_size; ++col)
-									{
-										*pf_dst = (pixel_t)(1.0f - *pf_src);
-										pf_dst++;
-										pf_src++;
-									}
-								}
-								else
-									if (cpuFlags & CPUF_AVX) // use AVX
-									{
-										float* pf_src = (float*)l_srcp;
-										float* pf_dst = (float*)l_dstp;
-										const int col32 = row_size - (row_size % 32); // use 4*8 256bit regs to load/store
-										__m256 ymm_fone = _mm256_set1_ps(1.0f);
+					__m256i c1_0_15 = _mm256_load_si256((__m256i*)p_src_c1);
+					__m256i c1_16_31 = _mm256_load_si256((__m256i*)(p_src_c1 + 32));
 
-										for (int64_t col = 0; col < col32; col += 32)
-										{
-											__m256 ymm0 = _mm256_loadu_ps(pf_src); // better align start addr with pre-conversion of 32-bytes aligned (if exist) and use load_ps
-											__m256 ymm1 = _mm256_loadu_ps(pf_src + 8);
-											__m256 ymm2 = _mm256_loadu_ps(pf_src + 16);
-											__m256 ymm3 = _mm256_loadu_ps(pf_src + 24);
+					__m256i c2_0_15 = _mm256_load_si256((__m256i*)p_src_c2);
+					__m256i c2_16_31 = _mm256_load_si256((__m256i*)(p_src_c2 + 32));
 
-											ymm0 = _mm256_sub_ps(ymm_fone, ymm0);
-											ymm1 = _mm256_sub_ps(ymm_fone, ymm1);
-											ymm2 = _mm256_sub_ps(ymm_fone, ymm2);
-											ymm3 = _mm256_sub_ps(ymm_fone, ymm3);
+					__m256i abs_dif_c1_0_15 = _mm256i_abs_sub_epu16(ref_0_15, c1_0_15);
+					__m256i abs_dif_c1_16_31 = _mm256i_abs_sub_epu16(ref_16_31, c1_16_31);
 
-											_mm256_storeu_ps(pf_dst, ymm0);
-											_mm256_storeu_ps(pf_dst + 8, ymm1);
-											_mm256_storeu_ps(pf_dst + 16, ymm2);
-											_mm256_storeu_ps(pf_dst + 24, ymm3);
+					__m256i abs_dif_c2_0_15 = _mm256i_abs_sub_epu16(ref_0_15, c2_0_15);
+					__m256i abs_dif_c2_16_31 = _mm256i_abs_sub_epu16(ref_16_31, c2_16_31);
 
-											pf_src += 32; // in floats
-											pf_dst += 32;
-										}
+					__m256i mask_0_15 = _mm256_cmpge_epu8(abs_dif_c1_0_15, abs_dif_c2_0_15);
+					__m256i mask_16_31 = _mm256_cmpge_epu8(abs_dif_c1_16_31, abs_dif_c2_16_31);
 
-										// last cols
-										for (int64_t col = col32; col < row_size; ++col)
-										{
-											*pf_dst = (pixel_t)(1.0f - *pf_src);
-											pf_dst++;
-											pf_src++;
-										}
-									}
-									else*/
+					__m256i res_0_15 = _mm256_blendv_epi8(c2_0_15, c1_0_15, mask_0_15);
+					__m256i res_16_31 = _mm256_blendv_epi8(c2_16_31, c1_16_31, mask_16_31);
+
+					_mm256_store_si256((__m256i*)p_dst, res_0_15);
+					_mm256_store_si256((__m256i*)(p_dst + 32), res_16_31);
+
+					p_src_ref += 64; // in bytes
+					p_src_c1 += 64; // in bytes
+					p_src_c2 += 64; // in bytes
+					p_dst += 64;
+
+				}
+
+				// last cols
+				for (int64_t col = col32; col < row_size; ++col)
+				{
+					int iDiffC1 = std::abs(l_srcp_ref[col] - l_srcp_c1[col]);
+					int iDiffC2 = std::abs(l_srcp_ref[col] - l_srcp_c2[col]);
+					if (iDiffC1 > iDiffC2)
+						l_dstp[col] = l_srcp_c1[col];
+					else
+						l_dstp[col] = l_srcp_c2[col];
+				}
+			}
+			else
 			if (cpuFlags & CPUF_SSE4_1) // use SSE up to 4.1
 			{
 				uint8_t* p_src_ref = (uint8_t*)l_srcp_ref;
@@ -276,7 +388,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 				uint8_t* p_src_c2 = (uint8_t*)l_srcp_c2;
 				uint8_t* p_dst = (uint8_t*)l_dstp;
 				//						const int col32 = row_size - (row_size % 32); // use 16*2 128bit regs to load/store (is it good for current AVS+ row stride ?)
-				const int col16 = src_pitch_ref - (src_pitch_ref % 16); // use 8*2 128bit regs to load/store (is it good for current AVS+ row stride ?)
+				const int col16 = src_pitch_ref - (src_pitch_ref % 32); // use 8*2 128bit regs to load/store (is it good for current AVS+ row stride ?)
 
 				for (int64_t col = 0; col < col16; col += 16)
 				{
@@ -295,8 +407,8 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 					__m128i abs_dif_c2_0_7 = _mm128i_abs_sub_epu16(ref_0_7, c2_0_7);
 					__m128i abs_dif_c2_8_15 = _mm128i_abs_sub_epu16(ref_8_15, c2_8_15);
 
-					__m128i mask_0_7 = _mm_cmpgt_epi16(abs_dif_c1_0_7, abs_dif_c2_0_7);
-					__m128i mask_8_15 = _mm_cmpgt_epi16(abs_dif_c1_8_15, abs_dif_c2_8_15);
+					__m128i mask_0_7 = _mm_cmpge_epu16(abs_dif_c1_0_7, abs_dif_c2_0_7);
+					__m128i mask_8_15 = _mm_cmpge_epu16(abs_dif_c1_8_15, abs_dif_c2_8_15);
 
 					__m128i res_0_7 = _mm_blendv_epi8(c2_0_7, c1_0_7, mask_0_7);// SSE 4.1
 					__m128i res_8_15 = _mm_blendv_epi8(c2_8_15, c1_8_15, mask_8_15);
