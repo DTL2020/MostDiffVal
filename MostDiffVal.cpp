@@ -352,8 +352,8 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 					__m256i abs_dif_c2_0_15 = _mm256i_abs_sub_epu16(ref_0_15, c2_0_15);
 					__m256i abs_dif_c2_16_31 = _mm256i_abs_sub_epu16(ref_16_31, c2_16_31);
 
-					__m256i mask_0_15 = _mm256_cmpge_epu8(abs_dif_c1_0_15, abs_dif_c2_0_15);
-					__m256i mask_16_31 = _mm256_cmpge_epu8(abs_dif_c1_16_31, abs_dif_c2_16_31);
+					__m256i mask_0_15 = _mm256_cmpge_epu16(abs_dif_c1_0_15, abs_dif_c2_0_15);
+					__m256i mask_16_31 = _mm256_cmpge_epu16(abs_dif_c1_16_31, abs_dif_c2_16_31);
 
 					__m256i res_0_15 = _mm256_blendv_epi8(c2_0_15, c1_0_15, mask_0_15);
 					__m256i res_16_31 = _mm256_blendv_epi8(c2_16_31, c1_16_31, mask_16_31);
