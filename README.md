@@ -22,7 +22,7 @@ Function GetSharpest(clip c1, clip c2)
 
 {
 
-avg=Average(c1.GaussResize(c1.width, c1.height, src_left=0.001, src_top=0.001, p=2), 0.5, c2.GaussResize(c2.width, c2.height, src_left=0.001, src_top=0.001, p=2), 0.5)
+avg=Layer(c1.GaussResize(c1.width, c1.height, src_left=0.001, src_top=0.001, p=2), c2.GaussResize(c2.width, c2.height, src_left=0.001, src_top=0.001, p=2), "fast")
 
 return MostDiffVal(avg, c1, c2)
 
