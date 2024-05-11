@@ -27,3 +27,5 @@ avg=Average(c1.GaussResize(c1.width, c1.height, src_left=0.001, src_top=0.001, p
 return MostDiffVal(avg, c1, c2)
 
 }
+
+Expr() analog is Expr(Ref, clip1, clip2, "x y - abs x z - abs >= y z ?")
