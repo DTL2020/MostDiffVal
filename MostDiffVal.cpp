@@ -4,14 +4,14 @@
 #include <cstdlib>
 
 
-#define _mm128i_abs_sub_epu8(a,b) _mm_or_si128(_mm_subs_epu8(a, b), _mm_subs_epu8(a, b))
-#define _mm128i_abs_sub_epu16(a,b) _mm_or_si128(_mm_subs_epu16(a, b), _mm_subs_epu16(a, b))
+#define _mm128i_abs_sub_epu8(a,b) _mm_or_si128(_mm_subs_epu8(a, b), _mm_subs_epu8(b, a))
+#define _mm128i_abs_sub_epu16(a,b) _mm_or_si128(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
 
-#define _mm256i_abs_sub_epu8(a,b) _mm256_or_si256(_mm256_subs_epu8(a, b), _mm256_subs_epu8(a, b))
-#define _mm256i_abs_sub_epu16(a,b) _mm256_or_si256(_mm256_subs_epu16(a, b), _mm256_subs_epu16(a, b))
+#define _mm256i_abs_sub_epu8(a,b) _mm256_or_si256(_mm256_subs_epu8(a, b), _mm256_subs_epu8(b, a))
+#define _mm256i_abs_sub_epu16(a,b) _mm256_or_si256(_mm256_subs_epu16(a, b), _mm256_subs_epu16(b, a))
 
-#define _mm512i_abs_sub_epu8(a,b) _mm512_or_si512(_mm512_subs_epu8(a, b), _mm512_subs_epu8(a, b))
-#define _mm512i_abs_sub_epu16(a,b) _mm512_or_si512(_mm512_subs_epu16(a, b), _mm512_subs_epu16(a, b))
+#define _mm512i_abs_sub_epu8(a,b) _mm512_or_si512(_mm512_subs_epu8(a, b), _mm512_subs_epu8(b, a))
+#define _mm512i_abs_sub_epu16(a,b) _mm512_or_si512(_mm512_subs_epu16(a, b), _mm512_subs_epu16(b, a))
 
 #define _mm_cmpge_epu8(a, b) _mm_cmpeq_epi8(_mm_max_epu8(a, b), a)
 #define _mm_cmpge_epu16(a, b) _mm_cmpeq_epi16(_mm_max_epu16(a, b), a)
@@ -245,7 +245,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 						{
 							int iDiffC1 = std::abs(l_srcp_ref[col] - l_srcp_c1[col]);
 							int iDiffC2 = std::abs(l_srcp_ref[col] - l_srcp_c2[col]);
-							if (iDiffC1 > iDiffC2)
+							if (iDiffC1 >= iDiffC2)
 								l_dstp[col] = l_srcp_c1[col];
 							else
 								l_dstp[col] = l_srcp_c2[col];
@@ -256,7 +256,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 						{
 							int iDiffC1 = std::abs(l_srcp_ref[x] - l_srcp_c1[x]);
 							int iDiffC2 = std::abs(l_srcp_ref[x] - l_srcp_c2[x]);
-							if (iDiffC1 > iDiffC2)
+							if (iDiffC1 >= iDiffC2)
 								l_dstp[x] = l_srcp_c1[x];
 							else
 								l_dstp[x] = l_srcp_c2[x];
@@ -373,7 +373,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 				{
 					int iDiffC1 = std::abs(l_srcp_ref[col] - l_srcp_c1[col]);
 					int iDiffC2 = std::abs(l_srcp_ref[col] - l_srcp_c2[col]);
-					if (iDiffC1 > iDiffC2)
+					if (iDiffC1 >= iDiffC2)
 						l_dstp[col] = l_srcp_c1[col];
 					else
 						l_dstp[col] = l_srcp_c2[col];
@@ -426,7 +426,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 				{
 					int iDiffC1 = std::abs(l_srcp_ref[col] - l_srcp_c1[col]);
 					int iDiffC2 = std::abs(l_srcp_ref[col] - l_srcp_c2[col]);
-					if (iDiffC1 > iDiffC2)
+					if (iDiffC1 >= iDiffC2)
 						l_dstp[col] = l_srcp_c1[col];
 					else
 						l_dstp[col] = l_srcp_c2[col];
@@ -437,7 +437,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 				{
 					int iDiffC1 = std::abs(l_srcp_ref[x] - l_srcp_c1[x]);
 					int iDiffC2 = std::abs(l_srcp_ref[x] - l_srcp_c2[x]);
-					if (iDiffC1 > iDiffC2)
+					if (iDiffC1 >= iDiffC2)
 						l_dstp[x] = l_srcp_c1[x];
 					else
 						l_dstp[x] = l_srcp_c2[x];
@@ -454,7 +454,7 @@ void ProcessPlane(unsigned char* _srcp_ref, unsigned char* _srcp_c1, unsigned ch
 			{
 				working_t wtDiffC1 = std::abs(srcp_ref[x] - srcp_c1[x]);
 				working_t wtDiffC2 = std::abs(srcp_ref[x] - srcp_c2[x]);
-				if (wtDiffC1 > wtDiffC2) 
+				if (wtDiffC1 >= wtDiffC2) 
 					dstp[x] = srcp_c1[x];
 				else
 					dstp[x] = srcp_c2[x];
